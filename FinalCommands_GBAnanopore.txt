@@ -1,0 +1,33 @@
+#FASTQ CONVERSION USING ALBACORE
+read_fast5_basecaller.py --flowcell FLO-MIN106 --kit SQK-LSK108 --barcoding --output_format fastq --input/path/to/.fast5 --save_path/path/to/output --worker_threads 8 -r
+
+#QC USING NANOOK
+nanook align -s path/sample directory -r path/ref.fasta -aligner graphmap
+nanook analyse -s path/sample directory -r path/ref.fasta -passonly -aligner graphmap
+
+#FASTER ALIGNMENTS WITH NGMLR
+ngmlr -r/path/to/reference.fa -q/path/to/merged/.fastq -o/path/to/.bam
+
+#BAM QC USING SAMTOOLS
+samtools sort/path/to/.bam>/path/to/.sorted.bam
+samtools index/path/to/.sorted.bam
+
+#VARIANT CALLING USING NANOPOLISH
+nanopolish index -d path/to/.fast5 path/to/.fastq
+nanopolish variants -g/path/to/reference.fa -r/path/to/merged/.fastq -b/path/to/sorted.bam --ploidy 2 -w "1:155,202,239–155,216,653" -o/path/to/.vcf --snps --fix-homopolymers
+
+#VARIANT AND LARGE DELETION CALLING USING SNIFFLES
+sniffles -m sorted.bam -s 2 -q 10 -l 55 -c 10 -v output.vcf
+
+#VARIANT ANNOTATION USING ANNOVAR
+perl table_annovar.pl/path/to/.vcf humandb/-buildver hg19 --protocol avsnp150 --operation f -nastring.--outfile/path/to/annovar.vcf --polish -vcfinput -remove
+
+#VCF FILE ANALYSIS
+vcftools --vcf/path/to/annovar.vcf --out/path/to/noindels.vcf --remove-indels --recode --recode-INFO-all
+bgzip/path/to/noindels.vcf ##GZIP to compress vcf
+tabix -p vcf/path/to/.gz   ##TABIX to index (gzi) before using vcftools
+vcf-merge/path/to/*.gz > merged.vcf ##VCFTOOLS to merge all.vcf files together (for easier review of output from run 1D-2)
+
+#COVERAGE IN BAM FILES USING BEDTOOLS 
+coverageBed -mean -a/pathto/file.bed -b/pathto/sorted.bam
+
